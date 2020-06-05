@@ -627,12 +627,12 @@ class Adafruit_Thermal(Serial):
             self.writeBytes(29, 114, 0)
         # Bit 2 of response seems to be paper status
         result = self.read(1)
-		if len(result) > 0:
-		    stat = ord(result) & 0b00000100
-			# If set, we have paper; if clear, no paper
-			return stat == 0
-		else:
-			return False
+        if len(result) > 0:
+            stat = ord(result) & 0b00000100
+            # If set, we have paper; if clear, no paper
+            return stat == 0
+        else:
+            return False
 
     def setLineHeight(self, val=32):
         if val < 24: val = 24
@@ -738,9 +738,9 @@ class Adafruit_Thermal(Serial):
         for arg in args:
             self.write((str(arg)).encode('cp437', 'ignore'))
         self.write('\n'.encode('cp437', 'ignore'))
-        
+
     def printlnWrap(self, *args, **kwargs):
-		for arg in args:
-			text = textwrap.fill(str(arg), self.maxColumn)
-			self.write((str(text)).encode('cp437', 'ignore'))
-		self.write('\n'.encode('cp437', 'ignore')) 
+        for arg in args:
+            text = textwrap.fill(str(arg), self.maxColumn)
+            self.write((str(text)).encode('cp437', 'ignore'))
+        self.write('\n'.encode('cp437', 'ignore'))
