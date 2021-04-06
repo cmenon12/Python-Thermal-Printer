@@ -461,10 +461,15 @@ class AdafruitThermal(Serial):
             pos = 0
         self.write_bytes(0x1B, 0x61, pos)
 
-    # Feeds by the specified number of lines
-    def feed(self, x=1):
+    def feed(self, lines: int = 1) -> None:
+        """Feeds by the specified number of lines.
+
+        :param lines: the number of lines to feed
+        :type lines: int, optional
+        """
+
         if self.firmware_version >= 264:
-            self.write_bytes(27, 100, x)
+            self.write_bytes(27, 100, lines)
             self.timeout_set(self.dot_feed_time * self.char_height)
             self.prev_byte = "\n"
             self.column = 0
@@ -472,49 +477,67 @@ class AdafruitThermal(Serial):
         else:
             # datasheet claims sending bytes 27, 100, <x> works,
             # but it feeds much more than that.  So, manually:
-            while x > 0:
+            while lines > 0:
                 self.write("\n".encode("cp437", "ignore"))
-                x -= 1
+                lines -= 1
 
-    # Feeds by the specified number of individual pixel rows
     def feed_rows(self, rows):
+        """Feeds by the specified number of individual pixel rows."""
+
         self.write_bytes(27, 74, rows)
         self.timeout_set(rows * self.dot_feed_time)
         self.prev_byte = "\n"
         self.column = 0
 
-    def flush(self):
-        self.write_bytes(12)  # ASCII FF
+    def flush(self) -> None:
+        """Flush using ASCII FF."""
 
-    def set_size(self, value):
-        c = value.upper()
-        if c == "L":  # Large: double width and height
-            size = 0x11
-            self.char_height = 48
-            self.max_column = 16
-        elif c == "M":  # Medium: double height
-            size = 0x01
-            self.char_height = 48
-            self.max_column = 32
-        else:  # Small: standard width and height
+        self.write_bytes(12)
+
+    def set_size(self, size: str) -> None:
+        """Set the text size.
+
+        S for small: single height, single width.
+        M for medium: double height, single width.
+        L for large: double width, double height.
+
+        :param size: the size to use
+        :type size: str
+        :raises ValueError: if an invalid size is given
+        """
+
+        if size.upper() == "S":
             size = 0x00
             self.char_height = 24
             self.max_column = 32
+        elif size.upper() == "M":
+            size = 0x01
+            self.char_height = 48
+            self.max_column = 32
+        elif size.upper() == "L":
+            size = 0x11
+            self.char_height = 48
+            self.max_column = 16
+        else:
+            raise ValueError("Text size can only be S, M, or L.")
 
         self.write_bytes(29, 33, size)
-        prev_byte = "\n"  # Setting the size adds a linefeed
 
-    # Underlines of different weights can be produced:
-    # 0 - no underline
-    # 1 - normal underline
-    # 2 - thick underline
-    def underline_on(self, weight=1):
-        if weight > 2:
-            weight = 2
+    def underline(self, weight: int) -> None:
+        """Set the underline weight.
+
+        0 for no underline.
+        1 for thin underline.
+        2 for thick underline.
+
+        :param weight: the weight to use
+        :type weight: int
+        :raises ValueError: if an invalid weight is given
+        """
+
+        if weight not in (0, 1, 2):
+            raise ValueError("Underline weight can only be 0, 1, or 2.")
         self.write_bytes(27, 45, weight)
-
-    def underline_off(self):
-        self.write_bytes(27, 45, 0)
 
     def print_bitmap(self, width: int, height: int, bitmap: List[int],
                      line_at_a_time: bool = False) -> None:

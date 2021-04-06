@@ -30,13 +30,11 @@ printer.bold_on()
 printer.println("Bold text")
 printer.bold_off()
 
-printer.underline_on(1)
+printer.underline(1)
 printer.println("Underlined text")
-printer.underline_off()
-
-printer.underline_on(2)
+printer.underline(2)
 printer.println("Thick underlined text")
-printer.underline_off()
+printer.underline(0)
 
 printer.upside_down_on()
 printer.println("Upside down text")
