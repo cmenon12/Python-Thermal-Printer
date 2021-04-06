@@ -33,10 +33,13 @@
 # - Add docstrings throughout!
 
 import math
+import pathlib
 import sys
 import textwrap
 import time
+from typing import Any, BinaryIO, List
 
+from PIL import Image
 from serial import Serial
 
 from enums import Barcode, Charset, Codepage
@@ -513,27 +516,42 @@ class AdafruitThermal(Serial):
     def underline_off(self):
         self.write_bytes(27, 45, 0)
 
-    def print_bitmap(self, w, h, bitmap, line_at_a_time=False):
-        row_bytes = math.floor((w + 7) / 8)  # Round up to next byte boundary
+    def print_bitmap(self, width: int, height: int, bitmap: List[int],
+                     line_at_a_time: bool = False) -> None:
+        """Print a bitmap.
+
+        The max width is 384 pixels
+
+        If line_at_a_time is True, print the image scanline-at-a-time
+        (rather than in chunks). This tends to make for much cleaner
+        printing (no feed gaps) on large images, but has the opposite
+        effect on small images that would fit in a single 'chunk',
+        so use carefully!
+
+        :param width: the width in pixels
+        :type width: int
+        :param height: the height in pixels
+        :type height: int
+        :param bitmap: the bitmap to print as a list of (hex) numbers
+        :type bitmap: List[int]
+        :param line_at_a_time: whether to print scanline-at-a-time
+        :type line_at_a_time: bool, optional
+        """
+
+        row_bytes = math.floor((width + 7) / 8)  # Round up to next byte boundary
         if row_bytes >= 48:
             row_bytes_clipped = 48  # 384 pixels max width
         else:
             row_bytes_clipped = row_bytes
 
-        # if line_at_a_time (line-at-a-time) is True, print bitmaps
-        # scanline-at-a-time (rather than in chunks).
-        # This tends to make for much cleaner printing
-        # (no feed gaps) on large images...but has the
-        # opposite effect on small images that would fit
-        # in a single 'chunk', so use carefully!
         if line_at_a_time:
             max_chunk_height = 1
         else:
             max_chunk_height = 255
 
         i = 0
-        for rowStart in range(0, h, max_chunk_height):
-            chunk_height = h - rowStart
+        for rowStart in range(0, height, max_chunk_height):
+            chunk_height = height - rowStart
             if chunk_height > max_chunk_height:
                 chunk_height = max_chunk_height
 
@@ -553,15 +571,27 @@ class AdafruitThermal(Serial):
 
         self.prev_byte = "\n"
 
-    # Print Image.  Requires Python Imaging Library.  This is
-    # specific to the Python port and not present in the Arduino
-    # library.  Image will be cropped to 384 pixels width if
-    # necessary, and converted to 1-bit w/diffusion dithering.
-    # For any other behavior (scale, B&W threshold, etc.), use
-    # the Imaging Library to perform such operations before
-    # passing the result to this function.
-    def print_image(self, image_file, line_at_a_time=False):
-        from PIL import Image
+    def print_image(self, image_file: Any[str, pathlib.Path, BinaryIO],
+                    line_at_a_time: bool = False) -> None:
+        """Print an image.
+
+        Image will be cropped to 384 pixels width if necessary, and
+        converted to 1-bit w/diffusion dithering.
+        Use the PIL to perform any other behaviour (e.g. scale,
+        B&W threshold, etc) before passing the result to this function.
+
+        If line_at_a_time is True, print the image scanline-at-a-time
+        (rather than in chunks). This tends to make for much cleaner
+        printing (no feed gaps) on large images, but has the opposite
+        effect on small images that would fit in a single 'chunk',
+        so use carefully!
+
+        :param image_file: the image file to print
+        :type image_file: Any[str, pathlib.Path, BinaryIO]
+        :param line_at_a_time: whether to print scanline-at-a-time
+        :type line_at_a_time: bool, optional
+        """
+
         image = Image.open(image_file)
         if image.mode != "1":
             image = image.convert("1")
