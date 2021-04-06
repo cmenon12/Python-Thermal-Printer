@@ -1,36 +1,36 @@
-# *************************************************************************
-# This is a Python library for the Adafruit Thermal Printer.
-# Pick one up at --> http://www.adafruit.com/products/597
-# These printers use TTL serial to communicate, 2 pins are required.
-# IMPORTANT: On 3.3V systems (e.g. Raspberry Pi), use a 10K resistor on
-# the RX pin (TX on the printer, green wire), or simply leave unconnected.
-#
-# Adafruit invests time and resources providing this open source code.
-# Please support Adafruit and open-source hardware by purchasing products
-# from Adafruit!
-#
-# Written by Limor Fried/Ladyada for Adafruit Industries.
-# Python port by Phil Burgess for Adafruit Industries.
-# MIT license, all text above must be included in any redistribution.
-# *************************************************************************
+"""This is a Python library for the Adafruit Thermal Printer.
+Pick one up at --> http://www.adafruit.com/products/597
+These printers use TTL serial to communicate, 2 pins are required.
+IMPORTANT: On 3.3V systems (e.g. Raspberry Pi), use a 10K resistor on
+the RX pin (TX on the printer, green wire), or simply leave unconnected.
 
-# This is pretty much a 1:1 direct Python port of the Adafruit_Thermal
-# library for Arduino.  All methods use the same naming conventions as the
-# Arduino library, with only slight changes in parameter behavior where
-# needed.  This should simplify porting existing Adafruit_Thermal-based
-# printer projects to Raspberry Pi, BeagleBone, etc.  See printertest.py
-# for an example.
-#
-# One significant change is the addition of the print_image() function,
-# which ties this to the Python Imaging Library and opens the door to a
-# lot of cool graphical stuff!
-#
-# TO DO:
-# - Might use standard ConfigParser library to put thermal calibration
-#   settings in a global configuration file (rather than in the library).
-# - Make this use proper Python library installation procedure.
-# - Trap errors properly.  Some stuff just falls through right now.
-# - Add docstrings throughout!
+Adafruit invests time and resources providing this open source code.
+Please support Adafruit and open-source hardware by purchasing products
+from Adafruit!
+
+Written by Limor Fried/Ladyada for Adafruit Industries.
+Python port by Phil Burgess for Adafruit Industries.
+MIT license, all text above must be included in any redistribution.
+*************************************************************************
+
+This is pretty much a 1:1 direct Python port of the Adafruit_Thermal
+library for Arduino.  All methods use the same naming conventions as the
+Arduino library, with only slight changes in parameter behavior where
+needed.  This should simplify porting existing Adafruit_Thermal-based
+printer projects to Raspberry Pi, BeagleBone, etc.  See printertest.py
+for an example.
+
+One significant change is the addition of the print_image() function,
+which ties this to the Python Imaging Library and opens the door to a
+lot of cool graphical stuff!
+
+TO DO:
+- Might use standard ConfigParser library to put thermal calibration
+  settings in a global configuration file (rather than in the library).
+- Make this use proper Python library installation procedure.
+- Trap errors properly.  Some stuff just falls through right now.
+- Add docstrings throughout!
+"""
 
 import math
 import pathlib
@@ -61,23 +61,20 @@ class AdafruitThermal(Serial):
     default_heat_time = 120
     firmware_version = 268
 
-    def __init__(self, port: str, baudrate: int, firmware: int = 268,
-                 *args, **kwargs):
+    def __init__(self, port: str, baudrate: int, *args, **kwargs):
         """Initialise the printer.
 
         :param port: the port of the printer
         :type port: str
         :param baudrate: the baudrate of the printer
         :type baudrate: int
-        :param firmware: the firmware of the printer * 100
-        :type firmware: int, optional
         """
 
         # Firmware is assumed version 2.68.  Can override this
         # with the "firmware=X" argument, where X is the major
         # version number * 100 + the minor version number (e.g.
         # pass "firmware=264" for version 2.64.
-        self.firmware_version = firmware
+        self.firmware_version = kwargs.get("firmware", 268)
 
         # Calculate time to issue one byte to the printer.
         # 11 bits (not 8) to accommodate idle, start and
@@ -268,6 +265,7 @@ class AdafruitThermal(Serial):
             40)  # Heat interval
 
     def reset(self):
+        """Resets the printer."""
         self.write_bytes(27, 64)  # Esc @ = init command
         self.prev_byte = "\n"  # Treat as if prior line is blank
         self.column = 0
@@ -370,7 +368,7 @@ class AdafruitThermal(Serial):
             raise TypeError("Barcode %s is not supported in firmware %d." %
                             (style.name, self.firmware_version))
 
-        self.feed(1)  # Recent firmware requires this?
+        self.feed()  # Recent firmware requires this?
         self.write_bytes(
             29, 72, 2,  # Print label below barcode
             29, 119, 3,  # Barcode width
@@ -788,8 +786,7 @@ class AdafruitThermal(Serial):
             stat = ord(result) & 0b00000100
             # If set, we have paper; if clear, no paper
             return stat == 0
-        else:
-            return False
+        return False
 
     def set_line_height(self, val: int = 32) -> None:
         """Sets the line spacing.
@@ -829,15 +826,6 @@ class AdafruitThermal(Serial):
         """
 
         self.write_bytes(27, 116, codepage.value)
-
-    # Copied from Arduino lib for parity; may not work on all printers
-    def tab(self):
-        self.write_bytes(9)
-        self.column = (self.column + 4) & 0xFC
-
-    # Copied from Arduino lib for parity; may not work on all printers
-    def set_char_spacing(self, spacing):
-        self.write_bytes(27, 32, spacing)
 
     def println(self, text: Any, wrap: bool = False, newline: bool = True) -> None:
         """Print the text.
