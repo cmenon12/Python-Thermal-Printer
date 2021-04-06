@@ -34,7 +34,6 @@
 
 import math
 import pathlib
-import sys
 import textwrap
 import time
 from typing import Any, BinaryIO
@@ -61,21 +60,8 @@ class AdafruitThermal(Serial):
     print_mode = 0
     default_heat_time = 120
     firmware_version = 268
-    write_to_stdout = False
 
-    def __init__(self, *args, **kwargs):
-        # NEW BEHAVIOR: if no parameters given, output is written
-        # to stdout, to be piped through 'lp -o raw' (old behavior
-        # was to use default port & baud rate).
-        baudrate = 9600
-        if len(args) == 0:
-            self.write_to_stdout = True
-        if len(args) == 1:
-            # If only port is passed, use default baud rate.
-            args = [args[0], baudrate]
-        elif len(args) == 2:
-            # If both passed, use those values.
-            baudrate = args[1]
+    def __init__(self, port, baudrate, *args, **kwargs):
 
         # Firmware is assumed version 2.68.  Can override this
         # with the "firmware=X" argument, where X is the major
@@ -83,69 +69,66 @@ class AdafruitThermal(Serial):
         # pass "firmware=264" for version 2.64.
         self.firmware_version = kwargs.get("firmware", 268)
 
-        if self.write_to_stdout is False:
-            # Calculate time to issue one byte to the printer.
-            # 11 bits (not 8) to accommodate idle, start and
-            # stop bits.  Idle time might be unnecessary, but
-            # erring on side of caution here.
-            self.byte_time = 11.0 / float(baudrate)
+        # Calculate time to issue one byte to the printer.
+        # 11 bits (not 8) to accommodate idle, start and
+        # stop bits.  Idle time might be unnecessary, but
+        # erring on side of caution here.
+        self.byte_time = 11.0 / float(baudrate)
 
-            Serial.__init__(self, port, baudrate *args, **kwargs)
+        Serial.__init__(self, port, baudrate, *args, **kwargs)
 
-            # Remainder of this method was previously in begin()
+        # Remainder of this method was previously in begin()
 
-            # The printer can't start receiving data immediately
-            # upon power up -- it needs a moment to cold boot
-            # and initialize.  Allow at least 1/2 sec of uptime
-            # before printer can receive data.
-            self.timeout_set(0.5)
+        # The printer can't start receiving data immediately
+        # upon power up -- it needs a moment to cold boot
+        # and initialize.  Allow at least 1/2 sec of uptime
+        # before printer can receive data.
+        self.timeout_set(0.5)
 
-            self.wake()
-            self.reset()
+        self.wake()
+        self.reset()
 
-            # Description of print settings from p. 23 of manual:
-            # ESC 7 n1 n2 n3 Setting Control Parameter Command
-            # Decimal: 27 55 n1 n2 n3
-            # max heating dots, heating time, heating interval
-            # n1 = 0-255 Max heat dots, Unit (8dots), Default: 7 (64 dots)
-            # n2 = 3-255 Heating time, Unit (10us), Default: 80 (800us)
-            # n3 = 0-255 Heating interval, Unit (10us), Default: 2 (20us)
-            # The more max heating dots, the more peak current
-            # will cost when printing, the faster printing speed.
-            # The max heating dots is 8*(n1+1).  The more heating
-            # time, the more density, but the slower printing
-            # speed.  If heating time is too short, blank page
-            # may occur.  The more heating interval, the more
-            # clear, but the slower printing speed.
+        # Description of print settings from p. 23 of manual:
+        # ESC 7 n1 n2 n3 Setting Control Parameter Command
+        # Decimal: 27 55 n1 n2 n3
+        # max heating dots, heating time, heating interval
+        # n1 = 0-255 Max heat dots, Unit (8dots), Default: 7 (64 dots)
+        # n2 = 3-255 Heating time, Unit (10us), Default: 80 (800us)
+        # n3 = 0-255 Heating interval, Unit (10us), Default: 2 (20us)
+        # The more max heating dots, the more peak current
+        # will cost when printing, the faster printing speed.
+        # The max heating dots is 8*(n1+1).  The more heating
+        # time, the more density, but the slower printing
+        # speed.  If heating time is too short, blank page
+        # may occur.  The more heating interval, the more
+        # clear, but the slower printing speed.
 
-            heat_time = kwargs.get("heattime", self.default_heat_time)
-            self.write_bytes(
-                27,  # Esc
-                55,  # 7 (print settings)
-                11,  # Heat dots
-                heat_time,  # Lib default
-                40)  # Heat interval
+        heat_time = kwargs.get("heattime", self.default_heat_time)
+        self.write_bytes(
+            27,  # Esc
+            55,  # 7 (print settings)
+            11,  # Heat dots
+            heat_time,  # Lib default
+            40)  # Heat interval
 
-            # Description of print density from p. 23 of manual:
-            # DC2 # n Set printing density
-            # Decimal: 18 35 n
-            # D4..D0 of n is used to set the printing density.
-            # Density is 50% + 5% * n(D4-D0) printing density.
-            # D7..D5 of n is used to set the printing break time.
-            # Break time is n(D7-D5)*250us.
-            # (Unsure of default values -- not documented)
+        # Description of print density from p. 23 of manual:
+        # DC2 # n Set printing density
+        # Decimal: 18 35 n
+        # D4..D0 of n is used to set the printing density.
+        # Density is 50% + 5% * n(D4-D0) printing density.
+        # D7..D5 of n is used to set the printing break time.
+        # Break time is n(D7-D5)*250us.
+        # (Unsure of default values -- not documented)
 
-            print_density = 10  # 100%
-            print_break_time = 2  # 500 uS
+        print_density = 10  # 100%
+        print_break_time = 2  # 500 uS
 
-            self.write_bytes(
-                18,  # DC2
-                35,  # Print density
-                (print_break_time << 5) | print_density)
-            self.dot_print_time = 0.03
-            self.dot_feed_time = 0.0021
-        else:
-            self.reset()  # Inits some vars
+        self.write_bytes(
+            18,  # DC2
+            35,  # Print density
+            (print_break_time << 5) | print_density)
+        self.dot_print_time = 0.03
+        self.dot_feed_time = 0.0021
 
     # Because there's no flow control between the printer and computer,
     # special care must be taken to avoid overrunning the printer's
@@ -165,9 +148,8 @@ class AdafruitThermal(Serial):
 
     # Waits (if necessary) for the prior task to complete.
     def timeout_wait(self):
-        if self.write_to_stdout is False:
-            while (time.time() - self.resume_time) < 0:
-                pass
+        while (time.time() - self.resume_time) < 0:
+            pass
 
     def set_times(self, print_time: int, feed_time: int) -> None:
         """Set the print and feed times.
@@ -202,24 +184,22 @@ class AdafruitThermal(Serial):
         self.dot_print_time = print_time / 1000000.0
         self.dot_feed_time = feed_time / 1000000.0
 
-    # 'Raw' byte-writing method
     def write_bytes(self, *args):
-        if self.write_to_stdout:
-            for arg in args:
-                sys.stdout.write(bytes([arg]))
-        else:
-            for arg in args:
-                self.timeout_wait()
-                self.timeout_set(len(args) * self.byte_time)
-                super(AdafruitThermal, self).write(bytes([arg]))
+        """Write raw bytes.
+
+        :param args: the bytes to write
+        :type args: Tuple[Any, ...]
+        """
+
+        for arg in args:
+            self.timeout_wait()
+            self.timeout_set(len(args) * self.byte_time)
+            super(AdafruitThermal, self).write(bytes([arg]))
 
     # Override write() method to keep track of paper feed.
     def write(self, *data):
         for i in range(len(data)):
             c = data[i]
-            if self.write_to_stdout:
-                sys.stdout.write(c)
-                continue
             if c != 0x13:
                 self.timeout_wait()
                 super(AdafruitThermal, self).write(c)
@@ -375,21 +355,13 @@ class AdafruitThermal(Serial):
             n = len(text)
             if n > 255:
                 n = 255
-            if self.write_to_stdout:
-                sys.stdout.write((chr(n)).encode("cp437", "ignore"))
-                for i in range(n):
-                    sys.stdout.write(text[i].encode("utf-8", "ignore"))
-            else:
-                super(AdafruitThermal, self).write((chr(n)).encode("utf-8", "ignore"))
-                for i in range(n):
-                    super(AdafruitThermal,
-                          self).write(text[i].encode("utf-8", "ignore"))
+            super(AdafruitThermal, self).write((chr(n)).encode("utf-8", "ignore"))
+            for i in range(n):
+                super(AdafruitThermal,
+                      self).write(text[i].encode("utf-8", "ignore"))
         else:
             # Older firmware: write string + NUL
-            if self.write_to_stdout:
-                sys.stdout.write(text.encode("utf-8", "ignore"))
-            else:
-                super(AdafruitThermal, self).write(text.encode("utf-8", "ignore"))
+            super(AdafruitThermal, self).write(text.encode("utf-8", "ignore"))
         self.prev_byte = "\n"
 
     def set_print_mode(self, mask: PrintMode) -> None:
@@ -673,11 +645,8 @@ class AdafruitThermal(Serial):
 
             for y in range(chunk_height):
                 for x in range(row_bytes_clipped):
-                    if self.write_to_stdout:
-                        sys.stdout.write(bytes([bitmap[i]]))
-                    else:
-                        super(AdafruitThermal,
-                              self).write(bytes([bitmap[i]]))
+                    super(AdafruitThermal,
+                          self).write(bytes([bitmap[i]]))
                     i += 1
                 i += row_bytes - row_bytes_clipped
             self.timeout_set(chunk_height * self.dot_print_time)
