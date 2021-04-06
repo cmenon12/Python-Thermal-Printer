@@ -130,24 +130,35 @@ class AdafruitThermal(Serial):
         self.dot_print_time = 0.03
         self.dot_feed_time = 0.0021
 
-    # Because there's no flow control between the printer and computer,
-    # special care must be taken to avoid overrunning the printer's
-    # buffer.  Serial output is throttled based on serial speed as well
-    # as an estimate of the device's print and feed rates (relatively
-    # slow, being bound to moving parts and physical reality).  After
-    # an operation is issued to the printer (e.g. bitmap print), a
-    # timeout is set before which any other printer operations will be
-    # suspended.  This is generally more efficient than using a delay
-    # in that it allows the calling code to continue with other duties
-    # (e.g. receiving or decoding an image) while the printer
-    # physically completes the task.
+    def timeout_set(self, duration: float):
+        """Sets the estimated completion time for a just-issued task.
 
-    # Sets estimated completion time for a just-issued task.
-    def timeout_set(self, x):
-        self.resume_time = time.time() + x
+        Because there's no flow control between the printer and
+        computer, special care must be taken to avoid overrunning the
+        printer's buffer.
 
-    # Waits (if necessary) for the prior task to complete.
+        Serial output is throttled based on serial speed as well as an
+        estimate of the device's print and feed rates (relatively slow,
+        being bound to moving parts and physical reality).
+
+        After an operation is issued to the printer (e.g. bitmap print),
+        a timeout is set before which any other printer operations will
+        be suspended.
+
+        This is generally more efficient than using a delay in that it
+        allows the calling code to continue with other duties (e.g.
+        receiving or decoding an image) while the printer physically
+        completes the task.
+
+        :param duration: how long to wait in seconds
+        :type duration: float
+        """
+
+        self.resume_time = time.time() + duration
+
     def timeout_wait(self):
+        """Waits (if necessary) for the prior task to complete."""
+
         while (time.time() - self.resume_time) < 0:
             pass
 
@@ -196,8 +207,15 @@ class AdafruitThermal(Serial):
             self.timeout_set(len(args) * self.byte_time)
             super(AdafruitThermal, self).write(bytes([arg]))
 
-    # Override write() method to keep track of paper feed.
     def write(self, *data):
+        """Write bytes.
+
+        This overrides Serial.write() to keep track of paper feed.
+
+        :param data: the bytes to write
+        :type data: Tuple[Any, ...]
+        """
+
         for i in range(len(data)):
             c = data[i]
             if c != 0x13:
