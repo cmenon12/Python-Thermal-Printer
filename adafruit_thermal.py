@@ -36,7 +36,7 @@ import math
 import pathlib
 import textwrap
 import time
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Union
 
 from PIL import Image
 from serial import Serial
@@ -60,6 +60,8 @@ class AdafruitThermal(Serial):
     print_mode = 0
     default_heat_time = 120
     firmware_version = 268
+    sideways = False
+    alt_font = False
 
     def __init__(self, port: str, baudrate: int, *args, **kwargs):
         """Initialise the printer.
@@ -289,6 +291,8 @@ class AdafruitThermal(Serial):
         self.double_width(False)
         self.strikethrough(False)
         self.bold(False)
+        self.rotate_sideways(False)
+        self.small_font(False)
         self.justify("L")
         self.set_size("S")
         self.underline(0)
@@ -404,9 +408,15 @@ class AdafruitThermal(Serial):
         else:
             self.char_height = 24
         if self.print_mode & PrintMode.DOUBLE_WIDTH_MASK.value:
-            self.max_column = 16
+            if self.alt_font is False:
+                self.max_column = 16
+            else:
+                self.max_column = 21
         else:
-            self.max_column = 32
+            if self.alt_font is False:
+                self.max_column = 32
+            else:
+                self.max_column = 42
 
     def unset_print_mode(self, mask: PrintMode) -> None:
         """Unset a print mode.
@@ -422,9 +432,15 @@ class AdafruitThermal(Serial):
         else:
             self.char_height = 24
         if self.print_mode & PrintMode.DOUBLE_WIDTH_MASK.value:
-            self.max_column = 16
+            if self.alt_font is False:
+                self.max_column = 16
+            else:
+                self.max_column = 21
         else:
-            self.max_column = 32
+            if self.alt_font is False:
+                self.max_column = 32
+            else:
+                self.max_column = 42
 
     def write_print_mode(self):
         """Write the current print mode."""
@@ -531,8 +547,10 @@ class AdafruitThermal(Serial):
 
         if mode is True:
             self.write_bytes(27, 86, 1)
+            self.sideways = True
         elif mode is False:
             self.write_bytes(27, 86, 0)
+            self.sideways = False
         else:
             raise TypeError("Rotate sideways mode must be True or False.")
 
@@ -546,8 +564,12 @@ class AdafruitThermal(Serial):
 
         if mode is True:
             self.set_print_mode(PrintMode.SMALL_FONT_MASK)
+            # self.write_bytes(27, 33, 1)
+            self.alt_font = True
         elif mode is False:
             self.unset_print_mode(PrintMode.SMALL_FONT_MASK)
+            # self.write_bytes(27, 33, 0)
+            self.alt_font = False
         else:
             raise TypeError("Small font mode must be True or False.")
 
@@ -622,15 +644,24 @@ class AdafruitThermal(Serial):
         if size.upper() == "S":
             size = 0x00
             self.char_height = 24
-            self.max_column = 32
+            if self.alt_font is False:
+                self.max_column = 32
+            else:
+                self.max_column = 42
         elif size.upper() == "M":
             size = 0x01
             self.char_height = 48
-            self.max_column = 32
+            if self.alt_font is False:
+                self.max_column = 32
+            else:
+                self.max_column = 42
         elif size.upper() == "L":
             size = 0x11
             self.char_height = 48
-            self.max_column = 16
+            if self.alt_font is False:
+                self.max_column = 16
+            else:
+                self.max_column = 21
         else:
             raise ValueError("Text size must be S, M, or L.")
 
@@ -704,7 +735,7 @@ class AdafruitThermal(Serial):
 
         self.prev_byte = "\n"
 
-    def print_image(self, image_file: Any[str, pathlib.Path, BinaryIO],
+    def print_image(self, image_file: Union[str, pathlib.Path, BinaryIO],
                     line_at_a_time: bool = False) -> None:
         """Print an image.
 
@@ -720,7 +751,7 @@ class AdafruitThermal(Serial):
         so use carefully!
 
         :param image_file: the image file to print
-        :type image_file: Any[str, pathlib.Path, BinaryIO]
+        :type image_file: Union[str, pathlib.Path, BinaryIO]
         :param line_at_a_time: whether to print scanline-at-a-time
         :type line_at_a_time: bool, optional
         """
@@ -800,6 +831,7 @@ class AdafruitThermal(Serial):
         :return: True if paper present, False for no paper
         """
 
+        self.flush()
         if self.firmware_version >= 264:
             self.write_bytes(27, 118, 0)
         else:
@@ -808,9 +840,9 @@ class AdafruitThermal(Serial):
         result = self.read(1)
         if len(result) > 0:
             stat = ord(result) & 0b00000100
-            # If set, we have paper; if clear, no paper
-            return stat == 0
-        return False
+            # If set, no paper; if clear, we have paper
+            return stat != 0
+        return True
 
     def set_line_height(self, val: int = 32) -> None:
         """Sets the line spacing.
@@ -862,7 +894,9 @@ class AdafruitThermal(Serial):
         :type newline: bool, optional
         """
 
-        if wrap is True:
+        if self.sideways is True:
+            text = str(text)[::-1]
+        elif wrap is True:
             text = textwrap.fill(str(text), self.max_column)
         self.write((str(text)).encode("cp437", "ignore"))
         if newline is True:

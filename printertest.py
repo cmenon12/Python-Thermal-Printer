@@ -7,15 +7,31 @@ from enums import Barcode
 
 printer = AdafruitThermal("/dev/ttyUSB0", 9600, timeout=5)
 
+
+def test_sizes():
+    printer.set_size("L")  # Set type size, accepts "S", "M", "L"
+    printer.println("Large")
+    printer.set_size("M")
+    printer.println("Medium")
+    printer.set_size("S")
+    printer.println("Small")
+
+
 # Test inverse on & off
 printer.inverse(True)
 printer.println("Inverse ON")
 printer.inverse(False)
 
-# Test character double-height on & off
-printer.double_height(True)
-printer.println("Double Height ON")
-printer.double_height(False)
+# Test sideways mode
+printer.rotate_sideways(True)
+printer.println("Sideways mode ON")
+printer.rotate_sideways(False)
+
+# Test small font
+printer.small_font(True)
+printer.println("Small font ON")
+test_sizes()
+printer.small_font(False)
 
 # Set justification (right, center, left) -- accepts "L", "C", "R"
 printer.justify("R")
@@ -52,12 +68,7 @@ printer.strikethrough(True)
 printer.println("Strikethrough text")
 printer.strikethrough(False)
 
-printer.set_size("L")   # Set type size, accepts "S", "M", "L"
-printer.println("Large")
-printer.set_size("M")
-printer.println("Medium")
-printer.set_size("S")
-printer.println("Small")
+test_sizes()
 
 printer.justify("C")
 printer.println("normal\nline\nspacing")
@@ -69,6 +80,11 @@ printer.justify("L")
 hasPaper = str(printer.has_paper())
 print("Does the printer have paper? " + hasPaper)
 printer.println("Does the printer have paper? " + hasPaper)
+
+input("Remove the paper and press enter. ")
+hasPaper = str(printer.has_paper())
+print("Does the printer have paper? " + hasPaper)
+input("Put the paper back and press enter. ")
 
 # Barcode examples
 printer.feed(1)
@@ -86,6 +102,6 @@ printer.print_bitmap(adaqrcode.width, adaqrcode.height, adaqrcode.data)
 printer.println("Adafruit!")
 printer.feed(2)
 
-printer.sleep()       # Tell printer to sleep
-printer.wake()        # Call wake() before printing again, even if reset
+printer.sleep()  # Tell printer to sleep
+printer.wake()  # Call wake() before printing again, even if reset
 printer.set_default()  # Restore printer to defaults

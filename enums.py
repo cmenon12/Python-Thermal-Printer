@@ -85,7 +85,7 @@ class Codepage(Enum):
 
 
 class PrintMode(Enum):
-    SMALL_FONT_MASK = (1 << 1)
+    SMALL_FONT_MASK = (1 << 0)
     UPDOWN_MASK = (1 << 2)
     BOLD_MASK = (1 << 3)
     DOUBLE_HEIGHT_MASK = (1 << 4)
