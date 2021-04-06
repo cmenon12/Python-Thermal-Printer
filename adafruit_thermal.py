@@ -32,13 +32,14 @@
 # - Trap errors properly.  Some stuff just falls through right now.
 # - Add docstrings throughout!
 
+import math
+import sys
 import textwrap
-from enum import Enum
+import time
 
 from serial import Serial
-import time
-import sys
-import math
+
+from enums import Barcode, Charset, Codepage
 
 
 class AdafruitThermal(Serial):
@@ -590,28 +591,33 @@ class AdafruitThermal(Serial):
 
         self.print_bitmap(width, height, bitmap, line_at_a_time)
 
-    # Take the printer offline. Print commands sent after this
-    # will be ignored until online() is called.
-    def offline(self):
+    def offline(self) -> None:
+        """Take the printer offline.
+
+        Print commands sent after this will be ignored until online() is called.
+        """
+
         self.write_bytes(27, 61, 0)
 
-    # Take the printer online. Subsequent print commands will be obeyed.
-    def online(self):
+    def online(self) -> None:
+        """Take the printer online. Subsequent print commands will be obeyed."""
         self.write_bytes(27, 61, 1)
 
-    # Put the printer into a low-energy state immediately.
-    def sleep(self):
-        self.sleep_after(1)  # Can't be 0, that means "don't sleep"
+    def sleep(self, seconds: int = 1) -> None:
+        """Put the printer into a low-energy state.
 
-    # Put the printer into a low-energy state after
-    # the given number of seconds.
-    def sleep_after(self, seconds):
+        :param seconds: how long to wait
+        :type seconds: int, optional
+        """
+
         if self.firmware_version >= 264:
             self.write_bytes(27, 56, seconds & 0xFF, seconds >> 8)
         else:
             self.write_bytes(27, 56, seconds)
 
-    def wake(self):
+    def wake(self) -> None:
+        """Take the printer out of the low-energy state."""
+
         self.timeout_set(0)
         self.write_bytes(255)
         if self.firmware_version >= 264:
@@ -622,15 +628,15 @@ class AdafruitThermal(Serial):
                 self.write_bytes(27)
                 self.timeout_set(0.1)
 
-    # Empty method, included for compatibility
-    # with existing code ported from Arduino.
-    def listen(self):
-        pass
+    def has_paper(self) -> bool:
+        """Check the status of the paper.
 
-    # Check the status of the paper using the printers self reporting
-    # ability. Doesn't match the datasheet...
-    # Returns True for paper, False for no paper.
-    def has_paper(self):
+        This uses the printer's self-reporting ability.
+        It doesn't match the datasheet
+
+        :return: True if paper present, False for no paper
+        """
+
         if self.firmware_version >= 264:
             self.write_bytes(27, 118, 0)
         else:
@@ -644,28 +650,44 @@ class AdafruitThermal(Serial):
         else:
             return False
 
-    def set_line_height(self, val=32):
+    def set_line_height(self, val: int = 32) -> None:
+        """Sets the line spacing.
+
+        The printer doesn't take into account the current text height
+        when setting line height, making this more akin to inter-line
+        spacing.
+
+        Default is 32 (char height of 24, line spacing of 8).
+
+        :param val: the line spacing to set
+        :type val: int
+        """
+
         if val < 24:
             val = 24
         self.line_spacing = val - 24
-
-        # The printer doesn't take into account the current text
-        # height when setting line height, making this more akin
-        # to inter-line spacing.  Default line spacing is 32
-        # (char height of 24, line spacing of 8).
         self.write_bytes(27, 51, val)
 
-    # Alters some chars in ASCII 0x23-0x7E range; see datasheet
-    def set_charset(self, val=3):
-        if val > 15:
-            val = 15
-        self.write_bytes(27, 82, val)
+    def set_charset(self, charset: Charset = Charset.CHARSET_UK) -> None:
+        """Set the charset.
 
-    # Selects alt symbols for 'upper' ASCII values 0x80-0xFF
-    def set_code_page(self, val=0):
-        if val > 47:
-            val = 47
-        self.write_bytes(27, 116, val)
+        This alters some chars in ASCII 0x23-0x7E range, see datasheet.
+
+        :param charset: the charset to use
+        :type charset: Charset
+        """
+
+        self.write_bytes(27, 82, charset.value)
+
+    def set_code_page(self,
+                      codepage: Codepage = Codepage.CODEPAGE_CP437) -> None:
+        """Selects alternative symbols for ASCII values 0x80-0xFF.
+
+        :param codepage: the codepage to use
+        :type codepage: Codepage
+        """
+
+        self.write_bytes(27, 116, codepage.value)
 
     # Copied from Arduino lib for parity; may not work on all printers
     def tab(self):
@@ -694,86 +716,3 @@ class AdafruitThermal(Serial):
             text = textwrap.fill(str(arg), self.max_column)
             self.write((str(text)).encode("cp437", "ignore"))
         self.write("\n".encode("cp437", "ignore"))
-
-
-class Barcode(Enum):
-    UPC_A = 0
-    UPC_E = 1
-    EAN13 = 2
-    EAN8 = 3
-    CODE39 = 4
-    I25 = 5
-    CODEBAR = 6
-    CODE93 = 7
-    CODE128 = 8
-    CODE11 = 9
-    MSI = 10
-    ITF = 11
-    CODABAR = 12
-
-
-class Charset(Enum):
-    CHARSET_USA = 0
-    CHARSET_FRANCE = 1
-    CHARSET_GERMANY = 2
-    CHARSET_UK = 3
-    CHARSET_DENMARK1 = 4
-    CHARSET_SWEDEN = 5
-    CHARSET_ITALY = 6
-    CHARSET_SPAIN1 = 7
-    CHARSET_JAPAN = 8
-    CHARSET_NORWAY = 9
-    CHARSET_DENMARK2 = 10
-    CHARSET_SPAIN2 = 11
-    CHARSET_LATINAMERICA = 12
-    CHARSET_KOREA = 13
-    CHARSET_SLOVENIA = 14
-    CHARSET_CROATIA = 14
-    CHARSET_CHINA = 15
-
-
-class Codepage(Enum):
-    CODEPAGE_CP437 = 0  # USA, Standard Europe
-    CODEPAGE_KATAKANA = 1
-    CODEPAGE_CP850 = 2  # Multilingual
-    CODEPAGE_CP860 = 3  # Portuguese
-    CODEPAGE_CP863 = 4  # Canadian-French
-    CODEPAGE_CP865 = 5  # Nordic
-    CODEPAGE_WCP1251 = 6  # Cyrillic
-    CODEPAGE_CP866 = 7  # Cyrillic #2
-    CODEPAGE_MIK = 8  # Cyrillic/Bulgarian
-    CODEPAGE_CP755 = 9  # East Europe, Latvian 2
-    CODEPAGE_IRAN = 10
-    CODEPAGE_CP862 = 15  # Hebrew
-    CODEPAGE_WCP1252 = 16  # Latin 1
-    CODEPAGE_WCP1253 = 17  # Greek
-    CODEPAGE_CP852 = 18  # Latin 2
-    CODEPAGE_CP858 = 19  # Multilingual Latin 1 + Euro
-    CODEPAGE_IRAN2 = 20
-    CODEPAGE_LATVIAN = 21
-    CODEPAGE_CP864 = 22  # Arabic
-    CODEPAGE_ISO_8859_1 = 23  # West Europe
-    CODEPAGE_CP737 = 24  # Greek
-    CODEPAGE_WCP1257 = 25  # Baltic
-    CODEPAGE_THAI = 26
-    CODEPAGE_CP720 = 27  # Arabic
-    CODEPAGE_CP855 = 28
-    CODEPAGE_CP857 = 29  # Turkish
-    CODEPAGE_WCP1250 = 30  # Central Europe
-    CODEPAGE_CP775 = 31
-    CODEPAGE_WCP1254 = 32  # Turkish
-    CODEPAGE_WCP1255 = 33  # Hebrew
-    CODEPAGE_WCP1256 = 34  # Arabic
-    CODEPAGE_WCP1258 = 35  # Vietnam
-    CODEPAGE_ISO_8859_2 = 36  # Latin 2
-    CODEPAGE_ISO_8859_3 = 37  # Latin 3
-    CODEPAGE_ISO_8859_4 = 38  # Baltic
-    CODEPAGE_ISO_8859_5 = 39  # Cyrillic
-    CODEPAGE_ISO_8859_6 = 40  # Arabic
-    CODEPAGE_ISO_8859_7 = 41  # Greek
-    CODEPAGE_ISO_8859_8 = 42  # Hebrew
-    CODEPAGE_ISO_8859_9 = 43  # Turkish
-    CODEPAGE_ISO_8859_15 = 44  # Latin 3
-    CODEPAGE_THAI2 = 45
-    CODEPAGE_CP856 = 46
-    CODEPAGE_CP874 = 47

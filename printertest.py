@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
-from adafruit_thermal import AdafruitThermal
 import gfx.adalogo as adalogo
 import gfx.adaqrcode as adaqrcode
+from adafruit_thermal import AdafruitThermal
+from enums import Barcode
 
 printer = AdafruitThermal("/dev/ttyUSB0", 9600, timeout=5)
 
@@ -74,10 +75,10 @@ printer.println("Does the printer have paper? " + hasPaper)
 # Barcode examples
 printer.feed(1)
 # CODE39 is the most common alphanumeric barcode
-printer.print_barcode("ADAFRUT", printer.CODE39)
+printer.print_barcode("ADAFRUT", Barcode.CODE39)
 printer.set_barcode_height(100)
 # Print UPC line on product barcodes
-printer.print_barcode("123456789123", printer.UPC_A)
+printer.print_barcode("123456789123", Barcode.UPC_A)
 
 # Print the 75x75 pixel logo in adalogo.py
 printer.print_bitmap(adalogo.width, adalogo.height, adalogo.data)
