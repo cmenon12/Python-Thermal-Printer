@@ -29,7 +29,7 @@ for i in range(0, 256, 15):
     printer.begin(i)
     printer.println(i)                 # Print heat time
     printer.inverse_on()
-    printer.print('{:^32}'.format(''))  # Print 32 spaces (inverted)
+    printer.print("{:^32}".format(""))  # Print 32 spaces (inverted)
     printer.inverse_off()
 
 printer.begin()  # Reset heat time to default

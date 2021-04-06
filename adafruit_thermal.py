@@ -33,6 +33,8 @@
 # - Add docstrings throughout!
 
 import textwrap
+from enum import Enum
+
 from serial import Serial
 import time
 import sys
@@ -46,7 +48,7 @@ class AdafruitThermal(Serial):
     byte_time = 0.0
     dot_print_time = 0.0
     dot_feed_time = 0.0
-    prev_byte = '\n'
+    prev_byte = "\n"
     column = 0
     max_column = 32
     char_height = 24
@@ -72,10 +74,10 @@ class AdafruitThermal(Serial):
             baudrate = args[1]
 
         # Firmware is assumed version 2.68.  Can override this
-        # with the 'firmware=X' argument, where X is the major
+        # with the "firmware=X" argument, where X is the major
         # version number * 100 + the minor version number (e.g.
         # pass "firmware=264" for version 2.64.
-        self.firmware_version = kwargs.get('firmware', 268)
+        self.firmware_version = kwargs.get("firmware", 268)
 
         if self.write_to_stdout is False:
             # Calculate time to issue one byte to the printer.
@@ -84,7 +86,7 @@ class AdafruitThermal(Serial):
             # erring on side of caution here.
             self.byte_time = 11.0 / float(baudrate)
 
-            Serial.__init__(self, *args, **kwargs)
+            Serial.__init__(self, port, baudrate *args, **kwargs)
 
             # Remainder of this method was previously in begin()
 
@@ -112,7 +114,7 @@ class AdafruitThermal(Serial):
             # may occur.  The more heating interval, the more
             # clear, but the slower printing speed.
 
-            heat_time = kwargs.get('heattime', self.default_heat_time)
+            heat_time = kwargs.get("heattime", self.default_heat_time)
             self.write_bytes(
                 27,  # Esc
                 55,  # 7 (print settings)
@@ -202,10 +204,10 @@ class AdafruitThermal(Serial):
                 self.timeout_wait()
                 super(AdafruitThermal, self).write(c)
                 d = self.byte_time
-                if ((c == '\n') or
+                if ((c == "\n") or
                         (self.column == self.max_column)):
                     # Newline or wrap
-                    if self.prev_byte == '\n':
+                    if self.prev_byte == "\n":
                         # Feed line (blank)
                         d += ((self.char_height +
                                self.line_spacing) *
@@ -219,7 +221,7 @@ class AdafruitThermal(Serial):
                         self.column = 0
                         # Treat wrap as newline
                         # on next pass
-                        c = '\n'
+                        c = "\n"
                 else:
                     self.column += 1
                 self.timeout_set(d)
@@ -238,7 +240,7 @@ class AdafruitThermal(Serial):
 
     def reset(self):
         self.write_bytes(27, 64)  # Esc @ = init command
-        self.prev_byte = '\n'  # Treat as if prior line is blank
+        self.prev_byte = "\n"  # Treat as if prior line is blank
         self.column = 0
         self.max_column = 32
         self.char_height = 24
@@ -253,19 +255,19 @@ class AdafruitThermal(Serial):
     # Reset text formatting parameters.
     def set_default(self):
         self.online()
-        self.justify('L')
+        self.justify("L")
         self.inverse_off()
         self.double_height_off()
         self.set_line_height(30)
         self.bold_off()
         self.underline_off()
         self.set_barcode_height(50)
-        self.set_size('s')
+        self.set_size("s")
         self.set_charset()
         self.set_code_page()
 
     def test(self):
-        self.write("Hello world!".encode('cp437', 'ignore'))
+        self.write("Hello world!".encode("cp437", "ignore"))
         self.feed(2)
 
     def test_page(self):
@@ -297,34 +299,34 @@ class AdafruitThermal(Serial):
     def print_barcode(self, text, type):
 
         new_dict = {  # UPC codes & values for firmware_version >= 264
-            self.UPC_A: 65,
-            self.UPC_E: 66,
-            self.EAN13: 67,
-            self.EAN8: 68,
-            self.CODE39: 69,
-            self.ITF: 70,
-            self.CODABAR: 71,
-            self.CODE93: 72,
-            self.CODE128: 73,
-            self.I25: -1,  # NOT IN NEW FIRMWARE
-            self.CODEBAR: -1,
-            self.CODE11: -1,
-            self.MSI: -1
+            Barcode.UPC_A: 65,
+            Barcode.UPC_E: 66,
+            Barcode.EAN13: 67,
+            Barcode.EAN8: 68,
+            Barcode.CODE39: 69,
+            Barcode.ITF: 70,
+            Barcode.CODABAR: 71,
+            Barcode.CODE93: 72,
+            Barcode.CODE128: 73,
+            Barcode.I25: -1,  # NOT IN NEW FIRMWARE
+            Barcode.CODEBAR: -1,
+            Barcode.CODE11: -1,
+            Barcode.MSI: -1
         }
         old_dict = {  # UPC codes & values for firmware_version < 264
-            self.UPC_A: 0,
-            self.UPC_E: 1,
-            self.EAN13: 2,
-            self.EAN8: 3,
-            self.CODE39: 4,
-            self.I25: 5,
-            self.CODEBAR: 6,
-            self.CODE93: 7,
-            self.CODE128: 8,
-            self.CODE11: 9,
-            self.MSI: 10,
-            self.ITF: -1,  # NOT IN OLD FIRMWARE
-            self.CODABAR: -1
+            Barcode.UPC_A: 0,
+            Barcode.UPC_E: 1,
+            Barcode.EAN13: 2,
+            Barcode.EAN8: 3,
+            Barcode.CODE39: 4,
+            Barcode.I25: 5,
+            Barcode.CODEBAR: 6,
+            Barcode.CODE93: 7,
+            Barcode.CODE128: 8,
+            Barcode.CODE11: 9,
+            Barcode.MSI: 10,
+            Barcode.ITF: -1,  # NOT IN OLD FIRMWARE
+            Barcode.CODABAR: -1
         }
 
         if self.firmware_version >= 264:
@@ -347,21 +349,21 @@ class AdafruitThermal(Serial):
             if n > 255:
                 n = 255
             if self.write_to_stdout:
-                sys.stdout.write((chr(n)).encode('cp437', 'ignore'))
+                sys.stdout.write((chr(n)).encode("cp437", "ignore"))
                 for i in range(n):
-                    sys.stdout.write(text[i].encode('utf-8', 'ignore'))
+                    sys.stdout.write(text[i].encode("utf-8", "ignore"))
             else:
-                super(AdafruitThermal, self).write((chr(n)).encode('utf-8', 'ignore'))
+                super(AdafruitThermal, self).write((chr(n)).encode("utf-8", "ignore"))
                 for i in range(n):
                     super(AdafruitThermal,
-                          self).write(text[i].encode('utf-8', 'ignore'))
+                          self).write(text[i].encode("utf-8", "ignore"))
         else:
             # Older firmware: write string + NUL
             if self.write_to_stdout:
-                sys.stdout.write(text.encode('utf-8', 'ignore'))
+                sys.stdout.write(text.encode("utf-8", "ignore"))
             else:
-                super(AdafruitThermal, self).write(text.encode('utf-8', 'ignore'))
-        self.prev_byte = '\n'
+                super(AdafruitThermal, self).write(text.encode("utf-8", "ignore"))
+        self.prev_byte = "\n"
 
     # === Character commands ===
 
@@ -447,9 +449,9 @@ class AdafruitThermal(Serial):
 
     def justify(self, value):
         c = value.upper()
-        if c == 'C':
+        if c == "C":
             pos = 1
-        elif c == 'R':
+        elif c == "R":
             pos = 2
         else:
             pos = 0
@@ -460,21 +462,21 @@ class AdafruitThermal(Serial):
         if self.firmware_version >= 264:
             self.write_bytes(27, 100, x)
             self.timeout_set(self.dot_feed_time * self.char_height)
-            self.prev_byte = '\n'
+            self.prev_byte = "\n"
             self.column = 0
 
         else:
             # datasheet claims sending bytes 27, 100, <x> works,
             # but it feeds much more than that.  So, manually:
             while x > 0:
-                self.write('\n'.encode('cp437', 'ignore'))
+                self.write("\n".encode("cp437", "ignore"))
                 x -= 1
 
     # Feeds by the specified number of individual pixel rows
     def feed_rows(self, rows):
         self.write_bytes(27, 74, rows)
         self.timeout_set(rows * self.dot_feed_time)
-        self.prev_byte = '\n'
+        self.prev_byte = "\n"
         self.column = 0
 
     def flush(self):
@@ -482,11 +484,11 @@ class AdafruitThermal(Serial):
 
     def set_size(self, value):
         c = value.upper()
-        if c == 'L':  # Large: double width and height
+        if c == "L":  # Large: double width and height
             size = 0x11
             self.char_height = 48
             self.max_column = 16
-        elif c == 'M':  # Medium: double height
+        elif c == "M":  # Medium: double height
             size = 0x01
             self.char_height = 48
             self.max_column = 32
@@ -496,7 +498,7 @@ class AdafruitThermal(Serial):
             self.max_column = 32
 
         self.write_bytes(29, 33, size)
-        prev_byte = '\n'  # Setting the size adds a linefeed
+        prev_byte = "\n"  # Setting the size adds a linefeed
 
     # Underlines of different weights can be produced:
     # 0 - no underline
@@ -548,7 +550,7 @@ class AdafruitThermal(Serial):
                 i += row_bytes - row_bytes_clipped
             self.timeout_set(chunk_height * self.dot_print_time)
 
-        self.prev_byte = '\n'
+        self.prev_byte = "\n"
 
     # Print Image.  Requires Python Imaging Library.  This is
     # specific to the Python port and not present in the Arduino
@@ -560,8 +562,8 @@ class AdafruitThermal(Serial):
     def print_image(self, image_file, line_at_a_time=False):
         from PIL import Image
         image = Image.open(image_file)
-        if image.mode != '1':
-            image = image.convert('1')
+        if image.mode != "1":
+            image = image.convert("1")
 
         width = image.size[0]
         height = image.size[1]
@@ -589,7 +591,7 @@ class AdafruitThermal(Serial):
         self.print_bitmap(width, height, bitmap, line_at_a_time)
 
     # Take the printer offline. Print commands sent after this
-    # will be ignored until 'online' is called.
+    # will be ignored until online() is called.
     def offline(self):
         self.write_bytes(27, 61, 0)
 
@@ -653,6 +655,64 @@ class AdafruitThermal(Serial):
         # (char height of 24, line spacing of 8).
         self.write_bytes(27, 51, val)
 
+    # Alters some chars in ASCII 0x23-0x7E range; see datasheet
+    def set_charset(self, val=3):
+        if val > 15:
+            val = 15
+        self.write_bytes(27, 82, val)
+
+    # Selects alt symbols for 'upper' ASCII values 0x80-0xFF
+    def set_code_page(self, val=0):
+        if val > 47:
+            val = 47
+        self.write_bytes(27, 116, val)
+
+    # Copied from Arduino lib for parity; may not work on all printers
+    def tab(self):
+        self.write_bytes(9)
+        self.column = (self.column + 4) & 0xFC
+
+    # Copied from Arduino lib for parity; may not work on all printers
+    def set_char_spacing(self, spacing):
+        self.write_bytes(27, 32, spacing)
+
+    # Overloading print() in Python pre-3.0 is dirty pool,
+    # but these are here to provide more direct compatibility
+    # with existing code written for the Arduino library.
+    def print(self, *args, **kwargs):
+        for arg in args:
+            self.write((str(arg)).encode("cp437", "ignore"))
+
+    # For Arduino code compatibility again
+    def println(self, *args, **kwargs):
+        for arg in args:
+            self.write((str(arg)).encode("cp437", "ignore"))
+        self.write("\n".encode("cp437", "ignore"))
+
+    def println_wrap(self, *args, **kwargs):
+        for arg in args:
+            text = textwrap.fill(str(arg), self.max_column)
+            self.write((str(text)).encode("cp437", "ignore"))
+        self.write("\n".encode("cp437", "ignore"))
+
+
+class Barcode(Enum):
+    UPC_A = 0
+    UPC_E = 1
+    EAN13 = 2
+    EAN8 = 3
+    CODE39 = 4
+    I25 = 5
+    CODEBAR = 6
+    CODE93 = 7
+    CODE128 = 8
+    CODE11 = 9
+    MSI = 10
+    ITF = 11
+    CODABAR = 12
+
+
+class Charset(Enum):
     CHARSET_USA = 0
     CHARSET_FRANCE = 1
     CHARSET_GERMANY = 2
@@ -671,12 +731,8 @@ class AdafruitThermal(Serial):
     CHARSET_CROATIA = 14
     CHARSET_CHINA = 15
 
-    # Alters some chars in ASCII 0x23-0x7E range; see datasheet
-    def set_charset(self, val=3):
-        if val > 15:
-            val = 15
-        self.write_bytes(27, 82, val)
 
+class Codepage(Enum):
     CODEPAGE_CP437 = 0  # USA, Standard Europe
     CODEPAGE_KATAKANA = 1
     CODEPAGE_CP850 = 2  # Multilingual
@@ -721,37 +777,3 @@ class AdafruitThermal(Serial):
     CODEPAGE_THAI2 = 45
     CODEPAGE_CP856 = 46
     CODEPAGE_CP874 = 47
-
-    # Selects alt symbols for 'upper' ASCII values 0x80-0xFF
-    def set_code_page(self, val=0):
-        if val > 47:
-            val = 47
-        self.write_bytes(27, 116, val)
-
-    # Copied from Arduino lib for parity; may not work on all printers
-    def tab(self):
-        self.write_bytes(9)
-        self.column = (self.column + 4) & 0xFC
-
-    # Copied from Arduino lib for parity; may not work on all printers
-    def set_char_spacing(self, spacing):
-        self.write_bytes(27, 32, spacing)
-
-    # Overloading print() in Python pre-3.0 is dirty pool,
-    # but these are here to provide more direct compatibility
-    # with existing code written for the Arduino library.
-    def print(self, *args, **kwargs):
-        for arg in args:
-            self.write((str(arg)).encode('cp437', 'ignore'))
-
-    # For Arduino code compatibility again
-    def println(self, *args, **kwargs):
-        for arg in args:
-            self.write((str(arg)).encode('cp437', 'ignore'))
-        self.write('\n'.encode('cp437', 'ignore'))
-
-    def println_wrap(self, *args, **kwargs):
-        for arg in args:
-            text = textwrap.fill(str(arg), self.max_column)
-            self.write((str(text)).encode('cp437', 'ignore'))
-        self.write('\n'.encode('cp437', 'ignore'))

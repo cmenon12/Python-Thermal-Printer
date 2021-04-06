@@ -16,12 +16,12 @@ printer.double_height_on()
 printer.println("Double Height ON")
 printer.double_height_off()
 
-# Set justification (right, center, left) -- accepts 'L', 'C', 'R'
-printer.justify('R')
+# Set justification (right, center, left) -- accepts "L", "C", "R"
+printer.justify("R")
 printer.println("Right justified")
-printer.justify('C')
+printer.justify("C")
 printer.println("Center justified")
-printer.justify('L')
+printer.justify("L")
 printer.println("Left justified")
 
 # Test more styles
@@ -53,19 +53,19 @@ printer.strike_on()
 printer.println("Strikethrough text")
 printer.strike_off()
 
-printer.set_size('L')   # Set type size, accepts 'S', 'M', 'L'
+printer.set_size("L")   # Set type size, accepts "S", "M", "L"
 printer.println("Large")
-printer.set_size('M')
+printer.set_size("M")
 printer.println("Medium")
-printer.set_size('S')
+printer.set_size("S")
 printer.println("Small")
 
-printer.justify('C')
+printer.justify("C")
 printer.println("normal\nline\nspacing")
 printer.set_line_height(50)
 printer.println("Taller\nline\nspacing")
 printer.set_line_height()  # Reset to default
-printer.justify('L')
+printer.justify("L")
 
 hasPaper = str(printer.has_paper())
 print("Does the printer have paper? " + hasPaper)
