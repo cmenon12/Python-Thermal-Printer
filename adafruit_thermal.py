@@ -440,15 +440,9 @@ class AdafruitThermal(Serial):
         """
 
         if mode is True:
-            if self.firmware_version >= 268:
-                self.write_bytes(29, 66, 1)
-            else:
-                self.set_print_mode(PrintMode.INVERSE_MASK)
+            self.write_bytes(29, 66, 1)
         elif mode is False:
-            if self.firmware_version >= 268:
-                self.write_bytes(29, 66, 0)
-            else:
-                self.unset_print_mode(PrintMode.INVERSE_MASK)
+            self.write_bytes(29, 66, 0)
         else:
             raise TypeError("Inverse mode must be True or False.")
 
@@ -526,6 +520,36 @@ class AdafruitThermal(Serial):
             self.unset_print_mode(PrintMode.BOLD_MASK)
         else:
             raise TypeError("Bold mode must be True or False.")
+
+    def rotate_sideways(self, mode: bool) -> None:
+        """Enables or disables 90 degree rotation clockwise.
+
+        :param mode: True for on, False for off
+        :type mode: bool
+        :raises TypeError: if mode is not True or False
+        """
+
+        if mode is True:
+            self.write_bytes(27, 86, 1)
+        elif mode is False:
+            self.write_bytes(27, 86, 0)
+        else:
+            raise TypeError("Rotate sideways mode must be True or False.")
+
+    def small_font(self, mode: bool) -> None:
+        """Enables or disables the alternative, smaller font.
+
+        :param mode: True for on, False for off
+        :type mode: bool
+        :raises TypeError: if mode is not True or False
+        """
+
+        if mode is True:
+            self.set_print_mode(PrintMode.SMALL_FONT_MASK)
+        elif mode is False:
+            self.unset_print_mode(PrintMode.SMALL_FONT_MASK)
+        else:
+            raise TypeError("Small font mode must be True or False.")
 
     def justify(self, position: str) -> None:
         """Set the text justification.
