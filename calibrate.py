@@ -14,23 +14,24 @@
 #
 # Whatever the outcome, take the last number printed BEFORE any
 # distorted bar and enter in in adafruit_thermal.py as default_heat_time
-# (around line 53).
+# (around line 61).
 #
 # You may need to pull on the paper as it reaches the jamming point,
 # and/or just abort the program, press the feed button and take the
 # last good number.
 
 from __future__ import print_function
+
 from adafruit_thermal import AdafruitThermal
 
-printer = AdafruitThermal("/dev/ttyUSB0", 9600, timeout=5)
+printer = AdafruitThermal("/dev/ttyUSB0", 9600)
 
 for i in range(0, 256, 15):
-    printer.begin(i)
-    printer.println(i)                 # Print heat time
-    printer.inverse_on()
-    printer.print("{:^32}".format(""))  # Print 32 spaces (inverted)
-    printer.inverse_off()
+    printer.set_heat_time(i)
+    printer.println(i)  # Print heat time
+    printer.inverse(True)
+    printer.println("{:^32}".format(""), False, False)  # Print 32 spaces (inverted)
+    printer.inverse(False)
 
-printer.begin()  # Reset heat time to default
+printer.set_heat_time()  # Reset heat time to default
 printer.feed(4)

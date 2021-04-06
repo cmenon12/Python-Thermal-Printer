@@ -61,13 +61,23 @@ class AdafruitThermal(Serial):
     default_heat_time = 120
     firmware_version = 268
 
-    def __init__(self, port, baudrate, *args, **kwargs):
+    def __init__(self, port: str, baudrate: int, firmware: int = 268,
+                 *args, **kwargs):
+        """Initialise the printer.
+
+        :param port: the port of the printer
+        :type port: str
+        :param baudrate: the baudrate of the printer
+        :type baudrate: int
+        :param firmware: the firmware of the printer * 100
+        :type firmware: int, optional
+        """
 
         # Firmware is assumed version 2.68.  Can override this
         # with the "firmware=X" argument, where X is the major
         # version number * 100 + the minor version number (e.g.
         # pass "firmware=264" for version 2.64.
-        self.firmware_version = kwargs.get("firmware", 268)
+        self.firmware_version = firmware
 
         # Calculate time to issue one byte to the printer.
         # 11 bits (not 8) to accommodate idle, start and
@@ -77,12 +87,9 @@ class AdafruitThermal(Serial):
 
         Serial.__init__(self, port, baudrate, *args, **kwargs)
 
-        # Remainder of this method was previously in begin()
-
-        # The printer can't start receiving data immediately
-        # upon power up -- it needs a moment to cold boot
-        # and initialize.  Allow at least 1/2 sec of uptime
-        # before printer can receive data.
+        # The printer can't start receiving data immediately upon
+        # power up -- it needs a moment to cold boot and initialize.
+        # Allow at least 0.5 sec of uptime before printer can receive data.
         self.timeout_set(0.5)
 
         self.wake()
@@ -245,10 +252,14 @@ class AdafruitThermal(Serial):
                 self.timeout_set(d)
                 self.prev_byte = c
 
-    # The bulk of this method was moved into __init__,
-    # but this is left here for compatibility with older
-    # code that might get ported directly from Arduino.
-    def begin(self, heat_time=default_heat_time):
+    def set_heat_time(self, heat_time: int = default_heat_time):
+        """Sets the heat time.
+
+        Was previously begin().
+
+        :param heat_time: the heat time to set
+        :type heat_time: int, optional
+        """
         self.write_bytes(
             27,  # Esc
             55,  # 7 (print settings)
@@ -708,16 +719,16 @@ class AdafruitThermal(Serial):
             n = y * row_bytes
             x = 0
             for b in range(row_bytes):
-                sum = 0
+                total = 0
                 bit = 128
                 while bit > 0:
                     if x >= width:
                         break
                     if pixels[x, y] == 0:
-                        sum |= bit
+                        total |= bit
                     x += 1
                     bit >>= 1
-                bitmap[n + b] = sum
+                bitmap[n + b] = total
 
         self.print_bitmap(width, height, bitmap, line_at_a_time)
 
@@ -828,21 +839,19 @@ class AdafruitThermal(Serial):
     def set_char_spacing(self, spacing):
         self.write_bytes(27, 32, spacing)
 
-    # Overloading print() in Python pre-3.0 is dirty pool,
-    # but these are here to provide more direct compatibility
-    # with existing code written for the Arduino library.
-    def print(self, *args, **kwargs):
-        for arg in args:
-            self.write((str(arg)).encode("cp437", "ignore"))
+    def println(self, text: Any, wrap: bool = False, newline: bool = True) -> None:
+        """Print the text.
 
-    # For Arduino code compatibility again
-    def println(self, *args, **kwargs):
-        for arg in args:
-            self.write((str(arg)).encode("cp437", "ignore"))
-        self.write("\n".encode("cp437", "ignore"))
+        :param text: the text to print
+        :type text: Any
+        :param wrap: whether to wrap the text
+        :type wrap: bool, optional
+        :param newline: whether to write a newline at the end
+        :type newline: bool, optional
+        """
 
-    def println_wrap(self, *args, **kwargs):
-        for arg in args:
-            text = textwrap.fill(str(arg), self.max_column)
-            self.write((str(text)).encode("cp437", "ignore"))
-        self.write("\n".encode("cp437", "ignore"))
+        if wrap is True:
+            text = textwrap.fill(str(text), self.max_column)
+        self.write((str(text)).encode("cp437", "ignore"))
+        if newline is True:
+            self.write("\n".encode("cp437", "ignore"))
