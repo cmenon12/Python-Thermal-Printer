@@ -169,22 +169,38 @@ class AdafruitThermal(Serial):
             while (time.time() - self.resume_time) < 0:
                 pass
 
-    # Printer performance may vary based on the power supply voltage,
-    # thickness of paper, phase of the moon and other seemingly random
-    # variables.  This method sets the times (in microseconds) for the
-    # paper to advance one vertical 'dot' when printing and feeding.
-    # For example, in the default initialized state, normal-sized text
-    # is 24 dots tall and the line spacing is 32 dots, so the time for
-    # one line to be issued is approximately 24 * print time + 8 * feed
-    # time.  The default print and feed times are based on a random
-    # test unit, but as stated above your reality may be influenced by
-    # many factors.  This lets you tweak the timing to avoid excessive
-    # delays and/or overrunning the printer buffer.
-    def set_times(self, p, f):
+    def set_times(self, print_time: int, feed_time: int) -> None:
+        """Set the print and feed times.
+
+        Printer performance may vary based on the power supply
+        voltage, thickness of paper, phase of the moon and other
+        seemingly random variables.
+
+        This method sets the times (in microseconds) for the paper to
+        advance one vertical 'dot' when printing and feeding.
+
+        For example, in the default initialized state, normal-sized text
+        is 24 dots tall and the line spacing is 32 dots, so the time for
+        one line to be issued is approximately (24 * print time) +
+        (8 * feed time).
+
+        The default print and feed times are based on a random test
+        unit, but as stated above your reality may be influenced by many
+        factors.
+
+        This lets you tweak the timing to avoid excessive delays and/or
+        overrunning the printer buffer.
+
+        :param print_time: the print time in seconds
+        :type print_time: int
+        :param feed_time: the feed time in seconds
+        :type feed_time: int
+        """
+
         # Units are in microseconds for
         # compatibility with Arduino library
-        self.dot_print_time = p / 1000000.0
-        self.dot_feed_time = f / 1000000.0
+        self.dot_print_time = print_time / 1000000.0
+        self.dot_feed_time = feed_time / 1000000.0
 
     # 'Raw' byte-writing method
     def write_bytes(self, *args):
@@ -256,8 +272,9 @@ class AdafruitThermal(Serial):
             self.write_bytes(4, 8, 12, 16)  # every 4 columns,
             self.write_bytes(20, 24, 28, 0)  # 0 is end-of-list.
 
-    # Reset text formatting parameters.
-    def set_default(self):
+    def set_default(self) -> None:
+        """Restores default text formatting."""
+
         self.online()
         self.inverse(False)
         self.upside_down(False)
@@ -282,27 +299,27 @@ class AdafruitThermal(Serial):
             self.dot_print_time * 24 * 26 +
             self.dot_feed_time * (6 * 26 + 30))
 
-    def set_barcode_height(self, val=50):
-        if val < 1:
-            val = 1
-        self.barcode_height = val
-        self.write_bytes(29, 104, val)
+    def set_barcode_height(self, height: int = 50) -> None:
+        """Set the height of the barcode in pixels.
 
-    UPC_A = 0
-    UPC_E = 1
-    EAN13 = 2
-    EAN8 = 3
-    CODE39 = 4
-    I25 = 5
-    CODEBAR = 6
-    CODE93 = 7
-    CODE128 = 8
-    CODE11 = 9
-    MSI = 10
-    ITF = 11
-    CODABAR = 12
+        :param height: the height of the barcode in pixels
+        :type height: int, optional
+        """
 
-    def print_barcode(self, text, type):
+        if height < 1:
+            raise ValueError("Barcode height must not be less than 1.")
+        self.barcode_height = height
+        self.write_bytes(29, 104, height)
+
+    def print_barcode(self, text: str, style: Barcode) -> None:
+        """Prints a barcode.
+
+        :param text: the text to encode in the barcode
+        :type text: str
+        :param style: the style (or type) of the barcode to use
+        :type style: Barcode
+        :raises TypeError: if the barcode style isn't supported
+        """
 
         new_dict = {  # UPC codes & values for firmware_version >= 264
             Barcode.UPC_A: 65,
@@ -335,12 +352,15 @@ class AdafruitThermal(Serial):
             Barcode.CODABAR: -1
         }
 
+        # Get the code for the barcode
         if self.firmware_version >= 264:
-            n = new_dict[type]
+            n = new_dict[style]
         else:
-            n = old_dict[type]
+            n = old_dict[style]
         if n == -1:
-            return
+            raise TypeError("Barcode %s is not supported in firmware %d." %
+                            (style.name, self.firmware_version))
+
         self.feed(1)  # Recent firmware requires this?
         self.write_bytes(
             29, 72, 2,  # Print label below barcode
@@ -348,6 +368,7 @@ class AdafruitThermal(Serial):
             29, 107, n)  # Barcode type
         self.timeout_wait()
         self.timeout_set((self.barcode_height + 40) * self.dot_print_time)
+
         # Print string
         if self.firmware_version >= 264:
             # Recent firmware: write length byte + string sans NUL
@@ -416,7 +437,7 @@ class AdafruitThermal(Serial):
 
         :param mode: True for on, False for off
         :type mode: bool
-        :raises ValueError: if mode is not True or False
+        :raises TypeError: if mode is not True or False
         """
 
         if mode is True:
@@ -430,14 +451,14 @@ class AdafruitThermal(Serial):
             else:
                 self.unset_print_mode(PrintMode.INVERSE_MASK)
         else:
-            raise ValueError("Inverse mode can only be True or False.")
+            raise TypeError("Inverse mode must be True or False.")
 
     def upside_down(self, mode: bool) -> None:
         """Enables or disables upside down text.
 
         :param mode: True for on, False for off
         :type mode: bool
-        :raises ValueError: if mode is not True or False
+        :raises TypeError: if mode is not True or False
         """
 
         if mode is True:
@@ -445,14 +466,14 @@ class AdafruitThermal(Serial):
         elif mode is False:
             self.unset_print_mode(PrintMode.UPDOWN_MASK)
         else:
-            raise ValueError("Upside down mode can only be True or False.")
+            raise TypeError("Upside down mode must be True or False.")
 
     def double_height(self, mode: bool) -> None:
         """Enables or disables double height text.
 
         :param mode: True for on, False for off
         :type mode: bool
-        :raises ValueError: if mode is not True or False
+        :raises TypeError: if mode is not True or False
         """
 
         if mode is True:
@@ -460,14 +481,14 @@ class AdafruitThermal(Serial):
         elif mode is False:
             self.unset_print_mode(PrintMode.DOUBLE_HEIGHT_MASK)
         else:
-            raise ValueError("Double height mode can only be True or False.")
+            raise TypeError("Double height mode must be True or False.")
 
     def double_width(self, mode: bool) -> None:
         """Enables or disables double width text.
 
         :param mode: True for on, False for off
         :type mode: bool
-        :raises ValueError: if mode is not True or False
+        :raises TypeError: if mode is not True or False
         """
 
         if mode is True:
@@ -475,14 +496,14 @@ class AdafruitThermal(Serial):
         elif mode is False:
             self.unset_print_mode(PrintMode.DOUBLE_WIDTH_MASK)
         else:
-            raise ValueError("Double width mode can only be True or False.")
+            raise TypeError("Double width mode must be True or False.")
 
     def strikethrough(self, mode: bool) -> None:
         """Enables or disables strikethrough text.
 
         :param mode: True for on, False for off
         :type mode: bool
-        :raises ValueError: if mode is not True or False
+        :raises TypeError: if mode is not True or False
         """
 
         if mode is True:
@@ -490,14 +511,14 @@ class AdafruitThermal(Serial):
         elif mode is False:
             self.unset_print_mode(PrintMode.STRIKE_MASK)
         else:
-            raise ValueError("Strikethrough mode can only be True or False.")
+            raise TypeError("Strikethrough mode must be True or False.")
 
     def bold(self, mode: bool) -> None:
         """Enables or disables bold text.
 
         :param mode: True for on, False for off
         :type mode: bool
-        :raises ValueError: if mode is not True or False
+        :raises TypeError: if mode is not True or False
         """
 
         if mode is True:
@@ -505,7 +526,7 @@ class AdafruitThermal(Serial):
         elif mode is False:
             self.unset_print_mode(PrintMode.BOLD_MASK)
         else:
-            raise ValueError("Bold mode can only be True or False.")
+            raise TypeError("Bold mode must be True or False.")
 
     def justify(self, position: str) -> None:
         """Set the text justification.
@@ -526,7 +547,7 @@ class AdafruitThermal(Serial):
         elif position.upper() == "R":
             justify = 2
         else:
-            raise ValueError("Justify position can only be L, C, or R.")
+            raise ValueError("Justify position must be L, C, or R.")
 
         self.write_bytes(0x1B, 0x61, justify)
 
@@ -588,7 +609,7 @@ class AdafruitThermal(Serial):
             self.char_height = 48
             self.max_column = 16
         else:
-            raise ValueError("Text size can only be S, M, or L.")
+            raise ValueError("Text size must be S, M, or L.")
 
         self.write_bytes(29, 33, size)
 
@@ -605,7 +626,7 @@ class AdafruitThermal(Serial):
         """
 
         if weight not in (0, 1, 2):
-            raise ValueError("Underline weight can only be 0, 1, or 2.")
+            raise ValueError("Underline weight must be 0, 1, or 2.")
         self.write_bytes(27, 45, weight)
 
     def print_bitmap(self, width: int, height: int, bitmap: bytearray,
