@@ -1,20 +1,20 @@
 #!/usr/bin/python
 
-from Adafruit_Thermal import *
+from adafruit_thermal import AdafruitThermal
 import gfx.adalogo as adalogo
 import gfx.adaqrcode as adaqrcode
 
-printer = Adafruit_Thermal("/dev/ttyUSB0", 9600, timeout=5)
+printer = AdafruitThermal("/dev/ttyUSB0", 9600, timeout=5)
 
 # Test inverse on & off
-printer.inverseOn()
+printer.inverse_on()
 printer.println("Inverse ON")
-printer.inverseOff()
+printer.inverse_off()
 
 # Test character double-height on & off
-printer.doubleHeightOn()
+printer.double_height_on()
 printer.println("Double Height ON")
-printer.doubleHeightOff()
+printer.double_height_off()
 
 # Set justification (right, center, left) -- accepts 'L', 'C', 'R'
 printer.justify('R')
@@ -25,68 +25,68 @@ printer.justify('L')
 printer.println("Left justified")
 
 # Test more styles
-printer.boldOn()
+printer.bold_on()
 printer.println("Bold text")
-printer.boldOff()
+printer.bold_off()
 
-printer.underlineOn(1)
+printer.underline_on(1)
 printer.println("Underlined text")
-printer.underlineOff()
+printer.underline_off()
 
-printer.underlineOn(2)
+printer.underline_on(2)
 printer.println("Thick underlined text")
-printer.underlineOff()
+printer.underline_off()
 
-printer.upsideDownOn()
+printer.upside_down_on()
 printer.println("Upside down text")
-printer.upsideDownOff()
+printer.upside_down_off()
 
-printer.doubleHeightOn()
+printer.double_height_on()
 printer.println("Double height text")
-printer.doubleHeightOff()
+printer.double_height_off()
 
-printer.doubleWidthOn()
+printer.double_width_on()
 printer.println("Double width")
-printer.doubleWidthOff()
+printer.double_width_off()
 
-printer.strikeOn()
+printer.strike_on()
 printer.println("Strikethrough text")
-printer.strikeOff()
+printer.strike_off()
 
-printer.setSize('L')   # Set type size, accepts 'S', 'M', 'L'
+printer.set_size('L')   # Set type size, accepts 'S', 'M', 'L'
 printer.println("Large")
-printer.setSize('M')
+printer.set_size('M')
 printer.println("Medium")
-printer.setSize('S')
+printer.set_size('S')
 printer.println("Small")
 
 printer.justify('C')
 printer.println("normal\nline\nspacing")
-printer.setLineHeight(50)
+printer.set_line_height(50)
 printer.println("Taller\nline\nspacing")
-printer.setLineHeight()  # Reset to default
+printer.set_line_height()  # Reset to default
 printer.justify('L')
 
-hasPaper = str(printer.hasPaper())
+hasPaper = str(printer.has_paper())
 print("Does the printer have paper? " + hasPaper)
 printer.println("Does the printer have paper? " + hasPaper)
 
 # Barcode examples
 printer.feed(1)
 # CODE39 is the most common alphanumeric barcode
-printer.printBarcode("ADAFRUT", printer.CODE39)
-printer.setBarcodeHeight(100)
+printer.print_barcode("ADAFRUT", printer.CODE39)
+printer.set_barcode_height(100)
 # Print UPC line on product barcodes
-printer.printBarcode("123456789123", printer.UPC_A)
+printer.print_barcode("123456789123", printer.UPC_A)
 
 # Print the 75x75 pixel logo in adalogo.py
-printer.printBitmap(adalogo.width, adalogo.height, adalogo.data)
+printer.print_bitmap(adalogo.width, adalogo.height, adalogo.data)
 
 # Print the 135x135 pixel QR code in adaqrcode.py
-printer.printBitmap(adaqrcode.width, adaqrcode.height, adaqrcode.data)
+printer.print_bitmap(adaqrcode.width, adaqrcode.height, adaqrcode.data)
 printer.println("Adafruit!")
 printer.feed(2)
 
 printer.sleep()       # Tell printer to sleep
 printer.wake()        # Call wake() before printing again, even if reset
-printer.setDefault()  # Restore printer to defaults
+printer.set_default()  # Restore printer to defaults
