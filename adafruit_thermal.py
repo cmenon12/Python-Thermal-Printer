@@ -37,12 +37,12 @@ import pathlib
 import sys
 import textwrap
 import time
-from typing import Any, BinaryIO, List
+from typing import Any, BinaryIO
 
 from PIL import Image
 from serial import Serial
 
-from enums import Barcode, Charset, Codepage
+from enums import Barcode, Charset, Codepage, PrintMode
 
 
 class AdafruitThermal(Serial):
@@ -259,14 +259,16 @@ class AdafruitThermal(Serial):
     # Reset text formatting parameters.
     def set_default(self):
         self.online()
+        self.inverse(False)
+        self.upside_down(False)
+        self.double_height(False)
+        self.double_width(False)
+        self.strikethrough(False)
+        self.bold(False)
         self.justify("L")
-        self.inverse_off()
-        self.double_height_off()
-        self.set_line_height(30)
-        self.bold_off()
-        self.underline_off()
-        self.set_barcode_height(50)
-        self.set_size("s")
+        self.set_size("S")
+        self.underline(0)
+        self.set_barcode_height()
         self.set_charset()
         self.set_code_page()
 
@@ -369,97 +371,164 @@ class AdafruitThermal(Serial):
                 super(AdafruitThermal, self).write(text.encode("utf-8", "ignore"))
         self.prev_byte = "\n"
 
-    # === Character commands ===
+    def set_print_mode(self, mask: PrintMode) -> None:
+        """Set a print mode.
 
-    INVERSE_MASK = (1 << 1)  # Not in 2.6.8 firmware (see inverseOn())
-    UPDOWN_MASK = (1 << 2)
-    BOLD_MASK = (1 << 3)
-    DOUBLE_HEIGHT_MASK = (1 << 4)
-    DOUBLE_WIDTH_MASK = (1 << 5)
-    STRIKE_MASK = (1 << 6)
-
-    def set_print_mode(self, mask):
-        self.print_mode |= mask
+        :param mask: the print mode to set
+        :type mask: PrintMode
+        """
+        self.print_mode |= mask.value
         self.write_print_mode()
-        if self.print_mode & self.DOUBLE_HEIGHT_MASK:
+        if self.print_mode & PrintMode.DOUBLE_HEIGHT_MASK.value:
             self.char_height = 48
         else:
             self.char_height = 24
-        if self.print_mode & self.DOUBLE_WIDTH_MASK:
+        if self.print_mode & PrintMode.DOUBLE_WIDTH_MASK.value:
             self.max_column = 16
         else:
             self.max_column = 32
 
-    def unset_print_mode(self, mask):
-        self.print_mode &= ~mask
+    def unset_print_mode(self, mask: PrintMode) -> None:
+        """Unset a print mode.
+
+        :param mask: the print mode to unset
+        :type mask: PrintMode
+        """
+
+        self.print_mode &= ~mask.value
         self.write_print_mode()
-        if self.print_mode & self.DOUBLE_HEIGHT_MASK:
+        if self.print_mode & PrintMode.DOUBLE_HEIGHT_MASK.value:
             self.char_height = 48
         else:
             self.char_height = 24
-        if self.print_mode & self.DOUBLE_WIDTH_MASK:
+        if self.print_mode & PrintMode.DOUBLE_WIDTH_MASK.value:
             self.max_column = 16
         else:
             self.max_column = 32
 
     def write_print_mode(self):
+        """Write the current print mode."""
+
         self.write_bytes(27, 33, self.print_mode)
 
-    def normal(self):
-        self.print_mode = 0
-        self.write_print_mode()
+    def inverse(self, mode: bool) -> None:
+        """Enables or disables inverse text.
 
-    def inverse_on(self):
-        if self.firmware_version >= 268:
-            self.write_bytes(29, 66, 1)
+        :param mode: True for on, False for off
+        :type mode: bool
+        :raises ValueError: if mode is not True or False
+        """
+
+        if mode is True:
+            if self.firmware_version >= 268:
+                self.write_bytes(29, 66, 1)
+            else:
+                self.set_print_mode(PrintMode.INVERSE_MASK)
+        elif mode is False:
+            if self.firmware_version >= 268:
+                self.write_bytes(29, 66, 0)
+            else:
+                self.unset_print_mode(PrintMode.INVERSE_MASK)
         else:
-            self.set_print_mode(self.INVERSE_MASK)
+            raise ValueError("Inverse mode can only be True or False.")
 
-    def inverse_off(self):
-        if self.firmware_version >= 268:
-            self.write_bytes(29, 66, 0)
+    def upside_down(self, mode: bool) -> None:
+        """Enables or disables upside down text.
+
+        :param mode: True for on, False for off
+        :type mode: bool
+        :raises ValueError: if mode is not True or False
+        """
+
+        if mode is True:
+            self.set_print_mode(PrintMode.UPDOWN_MASK)
+        elif mode is False:
+            self.unset_print_mode(PrintMode.UPDOWN_MASK)
         else:
-            self.unset_print_mode(self.INVERSE_MASK)
+            raise ValueError("Upside down mode can only be True or False.")
 
-    def upside_down_on(self):
-        self.set_print_mode(self.UPDOWN_MASK)
+    def double_height(self, mode: bool) -> None:
+        """Enables or disables double height text.
 
-    def upside_down_off(self):
-        self.unset_print_mode(self.UPDOWN_MASK)
+        :param mode: True for on, False for off
+        :type mode: bool
+        :raises ValueError: if mode is not True or False
+        """
 
-    def double_height_on(self):
-        self.set_print_mode(self.DOUBLE_HEIGHT_MASK)
-
-    def double_height_off(self):
-        self.unset_print_mode(self.DOUBLE_HEIGHT_MASK)
-
-    def double_width_on(self):
-        self.set_print_mode(self.DOUBLE_WIDTH_MASK)
-
-    def double_width_off(self):
-        self.unset_print_mode(self.DOUBLE_WIDTH_MASK)
-
-    def strike_on(self):
-        self.set_print_mode(self.STRIKE_MASK)
-
-    def strike_off(self):
-        self.unset_print_mode(self.STRIKE_MASK)
-
-    def bold_on(self):
-        self.set_print_mode(self.BOLD_MASK)
-
-    def bold_off(self):
-        self.unset_print_mode(self.BOLD_MASK)
-
-    def justify(self, value):
-        c = value.upper()
-        if c == "C":
-            pos = 1
-        elif c == "R":
-            pos = 2
+        if mode is True:
+            self.set_print_mode(PrintMode.DOUBLE_HEIGHT_MASK)
+        elif mode is False:
+            self.unset_print_mode(PrintMode.DOUBLE_HEIGHT_MASK)
         else:
-            pos = 0
-        self.write_bytes(0x1B, 0x61, pos)
+            raise ValueError("Double height mode can only be True or False.")
+
+    def double_width(self, mode: bool) -> None:
+        """Enables or disables double width text.
+
+        :param mode: True for on, False for off
+        :type mode: bool
+        :raises ValueError: if mode is not True or False
+        """
+
+        if mode is True:
+            self.set_print_mode(PrintMode.DOUBLE_WIDTH_MASK)
+        elif mode is False:
+            self.unset_print_mode(PrintMode.DOUBLE_WIDTH_MASK)
+        else:
+            raise ValueError("Double width mode can only be True or False.")
+
+    def strikethrough(self, mode: bool) -> None:
+        """Enables or disables strikethrough text.
+
+        :param mode: True for on, False for off
+        :type mode: bool
+        :raises ValueError: if mode is not True or False
+        """
+
+        if mode is True:
+            self.set_print_mode(PrintMode.STRIKE_MASK)
+        elif mode is False:
+            self.unset_print_mode(PrintMode.STRIKE_MASK)
+        else:
+            raise ValueError("Strikethrough mode can only be True or False.")
+
+    def bold(self, mode: bool) -> None:
+        """Enables or disables bold text.
+
+        :param mode: True for on, False for off
+        :type mode: bool
+        :raises ValueError: if mode is not True or False
+        """
+
+        if mode is True:
+            self.set_print_mode(PrintMode.BOLD_MASK)
+        elif mode is False:
+            self.unset_print_mode(PrintMode.BOLD_MASK)
+        else:
+            raise ValueError("Bold mode can only be True or False.")
+
+    def justify(self, position: str) -> None:
+        """Set the text justification.
+
+        L for left.
+        C for centre.
+        R for right.
+
+        :param position: the justification to use
+        :type position: str
+        :raises ValueError: if an invalid justification is given
+        """
+
+        if position.upper() == "L":
+            justify = 0
+        elif position.upper() == "C":
+            justify = 1
+        elif position.upper() == "R":
+            justify = 2
+        else:
+            raise ValueError("Justify position can only be L, C, or R.")
+
+        self.write_bytes(0x1B, 0x61, justify)
 
     def feed(self, lines: int = 1) -> None:
         """Feeds by the specified number of lines.
@@ -539,7 +608,7 @@ class AdafruitThermal(Serial):
             raise ValueError("Underline weight can only be 0, 1, or 2.")
         self.write_bytes(27, 45, weight)
 
-    def print_bitmap(self, width: int, height: int, bitmap: List[int],
+    def print_bitmap(self, width: int, height: int, bitmap: bytearray,
                      line_at_a_time: bool = False) -> None:
         """Print a bitmap.
 
@@ -556,7 +625,7 @@ class AdafruitThermal(Serial):
         :param height: the height in pixels
         :type height: int
         :param bitmap: the bitmap to print as a list of (hex) numbers
-        :type bitmap: List[int]
+        :type bitmap: bytearray
         :param line_at_a_time: whether to print scanline-at-a-time
         :type line_at_a_time: bool, optional
         """

@@ -8,14 +8,14 @@ from enums import Barcode
 printer = AdafruitThermal("/dev/ttyUSB0", 9600, timeout=5)
 
 # Test inverse on & off
-printer.inverse_on()
+printer.inverse(True)
 printer.println("Inverse ON")
-printer.inverse_off()
+printer.inverse(False)
 
 # Test character double-height on & off
-printer.double_height_on()
+printer.double_height(True)
 printer.println("Double Height ON")
-printer.double_height_off()
+printer.double_height(False)
 
 # Set justification (right, center, left) -- accepts "L", "C", "R"
 printer.justify("R")
@@ -26,9 +26,9 @@ printer.justify("L")
 printer.println("Left justified")
 
 # Test more styles
-printer.bold_on()
+printer.bold(True)
 printer.println("Bold text")
-printer.bold_off()
+printer.bold(False)
 
 printer.underline(1)
 printer.println("Underlined text")
@@ -36,21 +36,21 @@ printer.underline(2)
 printer.println("Thick underlined text")
 printer.underline(0)
 
-printer.upside_down_on()
+printer.upside_down(True)
 printer.println("Upside down text")
-printer.upside_down_off()
+printer.upside_down(False)
 
-printer.double_height_on()
+printer.double_height(True)
 printer.println("Double height text")
-printer.double_height_off()
+printer.double_height(False)
 
-printer.double_width_on()
+printer.double_width(True)
 printer.println("Double width")
-printer.double_width_off()
+printer.double_width(False)
 
-printer.strike_on()
+printer.strikethrough(True)
 printer.println("Strikethrough text")
-printer.strike_off()
+printer.strikethrough(False)
 
 printer.set_size("L")   # Set type size, accepts "S", "M", "L"
 printer.println("Large")

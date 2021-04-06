@@ -82,3 +82,12 @@ class Codepage(Enum):
     CODEPAGE_THAI2 = 45
     CODEPAGE_CP856 = 46
     CODEPAGE_CP874 = 47
+
+
+class PrintMode(Enum):
+    INVERSE_MASK = (1 << 1)  # Not in 2.6.8 firmware (see inverseOn())
+    UPDOWN_MASK = (1 << 2)
+    BOLD_MASK = (1 << 3)
+    DOUBLE_HEIGHT_MASK = (1 << 4)
+    DOUBLE_WIDTH_MASK = (1 << 5)
+    STRIKE_MASK = (1 << 6)
