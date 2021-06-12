@@ -897,7 +897,10 @@ class AdafruitThermal(Serial):
         if self.sideways is True:
             text = str(text)[::-1]
         elif wrap is True:
-            text = textwrap.fill(str(text), self.max_column)
+            if text[-1] == " ":
+                text = textwrap.fill(str(text), self.max_column, replace_whitespace=True) + " "
+            else:
+                text = textwrap.fill(str(text), self.max_column, replace_whitespace=True)
         self.write((str(text)).encode("cp437", "ignore"))
         if newline is True:
             self.write("\n".encode("cp437", "ignore"))
