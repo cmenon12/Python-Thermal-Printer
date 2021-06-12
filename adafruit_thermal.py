@@ -41,7 +41,7 @@ from typing import Any, BinaryIO, Union
 from PIL import Image
 from serial import Serial
 
-from enums import Barcode, Charset, Codepage, PrintMode
+from .enums import Barcode, Charset, Codepage, PrintMode
 
 
 class AdafruitThermal(Serial):
