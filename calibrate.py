@@ -23,15 +23,18 @@
 from __future__ import print_function
 
 from adafruit_thermal import AdafruitThermal
+from enums import Barcode
 
-printer = AdafruitThermal("/dev/ttyUSB0", 9600)
+printer = AdafruitThermal("/dev/serial0", 9600)
 
 for i in range(0, 256, 15):
     printer.set_heat_time(i)
     printer.println(i)  # Print heat time
-    printer.inverse(True)
-    printer.println("{:^32}".format(""), False, False)  # Print 32 spaces (inverted)
-    printer.inverse(False)
+    printer.set_barcode_height(20)
+    printer.print_barcode("ABCDEFGH", Barcode.CODE128)
+    # printer.inverse(True)
+    # printer.println("                              ", False, False)  # Print 32 spaces (inverted)
+    # printer.inverse(False)
 
 printer.set_heat_time()  # Reset heat time to default
 printer.feed(4)

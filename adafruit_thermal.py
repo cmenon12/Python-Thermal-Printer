@@ -58,7 +58,7 @@ class AdafruitThermal(Serial):
     line_spacing = 8
     barcode_height = 50
     print_mode = 0
-    default_heat_time = 120
+    default_heat_time = 200
     firmware_version = 268
     sideways = False
     alt_font = False

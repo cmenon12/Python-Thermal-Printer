@@ -5,7 +5,7 @@ import gfx.adaqrcode as adaqrcode
 from adafruit_thermal import AdafruitThermal
 from enums import Barcode
 
-printer = AdafruitThermal("/dev/ttyUSB0", 9600, timeout=5)
+printer = AdafruitThermal("/dev/serial0", 9600, timeout=5)
 
 
 def test_sizes():
