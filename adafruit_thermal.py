@@ -403,6 +403,12 @@ class AdafruitThermal(Serial):
         """
         self.print_mode |= mask.value
         self.write_print_mode()
+
+        # Stop if we're not changing the height or width
+        if mask not in (PrintMode.DOUBLE_HEIGHT_MASK,
+                        PrintMode.DOUBLE_WIDTH_MASK):
+            return
+
         if self.print_mode & PrintMode.DOUBLE_HEIGHT_MASK.value:
             self.char_height = 48
         else:
@@ -530,10 +536,26 @@ class AdafruitThermal(Serial):
         :raises TypeError: if mode is not True or False
         """
 
+        # Switch it on
         if mode is True:
             self.set_print_mode(PrintMode.BOLD_MASK)
+
+            # Stop the size reverting to small
+            if self.char_height == 48 and (self.max_column == 16 or self.max_column == 21):
+                self.set_size("L")
+            if self.char_height == 48 and (self.max_column == 32 or self.max_column == 42):
+                self.set_size("M")
+
+        # Switch it off
         elif mode is False:
             self.unset_print_mode(PrintMode.BOLD_MASK)
+
+            # Stop the size reverting to small
+            if self.char_height == 48 and (self.max_column == 16 or self.max_column == 21):
+                self.set_size("L")
+            if self.char_height == 48 and (self.max_column == 32 or self.max_column == 42):
+                self.set_size("M")
+
         else:
             raise TypeError("Bold mode must be True or False.")
 
