@@ -38,6 +38,7 @@ import textwrap
 import time
 from typing import Any, BinaryIO, Union
 
+import PIL
 from PIL import Image
 from serial import Serial
 
@@ -757,8 +758,8 @@ class AdafruitThermal(Serial):
 
         self.prev_byte = "\n"
 
-    def print_image(self, image_file: Union[str, pathlib.Path, BinaryIO],
-                    line_at_a_time: bool = False) -> None:
+    def print_image_object(self, image: PIL.Image.Image,
+                           line_at_a_time: bool = False) -> None:
         """Print an image.
 
         Image will be cropped to 384 pixels width if necessary, and
@@ -772,13 +773,12 @@ class AdafruitThermal(Serial):
         effect on small images that would fit in a single 'chunk',
         so use carefully!
 
-        :param image_file: the image file to print
-        :type image_file: Union[str, pathlib.Path, BinaryIO]
+        :param image: the image object to print
+        :type image: PIL.Image.Image
         :param line_at_a_time: whether to print scanline-at-a-time
         :type line_at_a_time: bool, optional
         """
 
-        image = Image.open(image_file)
         if image.mode != "1":
             image = image.convert("1")
 
@@ -806,6 +806,31 @@ class AdafruitThermal(Serial):
                 bitmap[n + b] = total
 
         self.print_bitmap(width, height, bitmap, line_at_a_time)
+
+    def print_image_file(self, image_file: Union[str, pathlib.Path, BinaryIO],
+                         line_at_a_time: bool = False) -> None:
+        """Print an image file.
+
+        :param image_file: the image file to print
+        :type image_file: Union[str, pathlib.Path, BinaryIO]
+        :param line_at_a_time: whether to print scanline-at-a-time
+        :type line_at_a_time: bool, optional
+        """
+
+        image = Image.open(image_file)
+        self.print_image_object(image, line_at_a_time)
+
+    def print_image(self, image_file: Union[str, pathlib.Path, BinaryIO],
+                    line_at_a_time: bool = False) -> None:
+        """Wrapper of print_image_file() for backwards compatibility.
+
+        :param image_file: the image file to print
+        :type image_file: Union[str, pathlib.Path, BinaryIO]
+        :param line_at_a_time: whether to print scanline-at-a-time
+        :type line_at_a_time: bool, optional
+        """
+
+        self.print_image_file(image_file, line_at_a_time)
 
     def offline(self) -> None:
         """Take the printer offline.
