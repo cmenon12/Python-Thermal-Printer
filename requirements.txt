@@ -1,2 +1,2 @@
-pyserial
-Pillow
+pyserial==3.5
+Pillow==8.2.0
