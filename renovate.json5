@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>cmenon12/renovate-config(Python-Thermal-Printer)"
+    "github>cmenon12/config(Python-Thermal-Printer)"
   ],
   "schedule": "every 3 months on the first day of the month"
 }
